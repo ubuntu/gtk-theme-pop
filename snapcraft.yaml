@@ -1,0 +1,78 @@
+name: gtk-theme-pop
+adopt-info: gtk-theme-pop
+build-base: core20
+base: bare
+architectures:
+  - all
+summary: GTK Theme Pop
+description: |
+  This snap provides the Pop GTK theme in a form that can be used
+  by other snapped applications.  It can be installed alongside the
+  gtk-common-themes snap.
+grade: stable
+confinement: strict
+
+slots:
+  gtk-2-themes:
+    interface: content
+    source:
+      read:
+        - $SNAP/share/themes/Pop
+        - $SNAP/share/themes/Pop-dark
+  gtk-3-themes:
+    interface: content
+    source:
+      read:
+        - $SNAP/share/themes/Pop
+        - $SNAP/share/themes/Pop-dark
+  icon-themes:
+    interface: content
+    source:
+      read:
+        - $SNAP/share/icons/Pop
+
+parts:
+  utils:
+    plugin: dump
+    source: utils
+    prime:
+      - -*
+    build-packages:
+      - try: [gtk-update-icon-cache]
+      - else: [libgtk-3-bin]
+        
+  gtk-theme-pop:
+    after: [ utils ]
+    source: https://github.com/pop-os/gtk-theme.git
+    plugin: meson
+    meson-parameters:
+      - --prefix=/
+      - -Dgnome-shell=false
+      - -Dsessions=false
+      - -Dicons=false
+      - -Dsounds=false
+    build-packages:
+      - sassc
+      - libglib2.0-dev
+    override-pull: |
+      snapcraftctl pull
+      snapcraftctl set-version $(git describe --tags --abbrev=10)
+    override-build: |
+      snapcraftctl build
+      $SNAPCRAFT_STAGE/split-gtk-theme.sh $SNAPCRAFT_PART_INSTALL
+    stage:
+      - share/gtk2
+      - share/themes
+
+  icon-theme-pop:
+    after: [ utils ]
+    source: https://github.com/pop-os/icon-theme.git
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/
+    override-build: |
+      snapcraftctl build
+      $SNAPCRAFT_STAGE/update-icon-cache.sh $SNAPCRAFT_PART_INSTALL/share/icons
+    stage:
+      - share/icons
